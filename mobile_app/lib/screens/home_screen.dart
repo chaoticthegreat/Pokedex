@@ -1,8 +1,12 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'dart:math';
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import 'camera_modal_sheet.dart';
 import 'pokemon_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -12,107 +16,58 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  CameraController? _cameraController;
-  bool _isCameraInitialized = false;
   bool _isProcessing = false;
-  XFile? _capturedImage;
-  List<CameraDescription>? _cameras;
 
-  @override
-  void initState() {
-    super.initState();
-    _initCamera();
-  }
-
-  Future<void> _initCamera() async {
-    _cameras = await availableCameras();
-    if (_cameras != null && _cameras!.isNotEmpty) {
-      _cameraController = CameraController(
-        _cameras![0],
-        ResolutionPreset.medium,
-      );
-      await _cameraController!.initialize();
-      setState(() {
-        _isCameraInitialized = true;
-      });
-    }
+  Future<bool> _ensureCameraPermission() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) return true;
+    final result = await Permission.camera.request();
+    return result.isGranted;
   }
 
   void _onScanPokemon(BuildContext context) async {
-    setState(() {
-      _capturedImage = null;
-    });
-    showModalBottomSheet(
+    final cameras = await availableCameras();
+
+    if (cameras.isEmpty) return;
+
+    if (!context.mounted) return;
+
+    // show the modal, await the XFile
+    final XFile? picture = await showModalBottomSheet<XFile>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.black,
-      builder: (context) {
-        return SizedBox(
-          height: MediaQuery.of(context).size.height * 0.85,
-          child: _isCameraInitialized && _cameraController != null
-              ? Stack(
-                  children: [
-                    CameraPreview(_cameraController!),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 32.0),
-                        child: FloatingActionButton(
-                          backgroundColor: Colors.red,
-                          child: const Icon(
-                            Icons.camera,
-                            size: 36,
-                            color: Colors.white,
-                          ),
-                          onPressed: () async {
-                            final image = await _cameraController!
-                                .takePicture();
-                            setState(() {
-                              _capturedImage = image;
-                              _isProcessing = true;
-                            });
-                            if (context.mounted) {
-                              Navigator.of(context).pop();
-                            }
-                            // Simulate TFLite inference delay
-                            await Future.delayed(const Duration(seconds: 2));
-                            setState(() {
-                              _isProcessing = false;
-                            });
-                            if (context.mounted) {
-                              Navigator.of(context).pushNamed(
-                                PokemonDetailScreen.routeName,
-                                arguments: {
-                                  'speciesName': 'Pikachu',
-                                  'confidence': 0.98,
-                                  'image': File(image.path),
-                                },
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : const Center(child: CircularProgressIndicator()),
-        );
-      },
+      builder: (_) => CameraModalSheet(camera: cameras.first),
     );
-  }
 
-  @override
-  void dispose() {
-    _cameraController?.dispose();
-    super.dispose();
+    // if the user took one, navigate
+    if (picture != null) {
+      final model = await Interpreter.fromAsset('assets/models/image-cnn.tflite');
+
+      Random random = Random();
+
+      List<List<List<List<double>>>> input = [List.generate(200, (_) => List.generate(200, (_) => List.generate(3, (_) => random.nextDouble())))];
+      var output = List.filled(1*8, 0).reshape([1,8]);
+
+      model.run(input, output);
+
+      // TODO: preprocess the image, resize to 200x200, mean and std
+
+      Navigator.of(context).pushNamed(
+        PokemonDetailScreen.routeName,
+        arguments: {
+          'speciesName': 'Pikachu',
+          'confidence': 0.98,
+          'image': File(picture.path),
+        },
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Color.fromRGBO(17, 17, 17, 1),
-      ),
+      decoration: const BoxDecoration(color: Color.fromRGBO(17, 17, 17, 1)),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
@@ -146,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Snap or record to identify Pokémon instantly!',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 18,
                           color: Colors.white,
                           fontWeight: FontWeight.w500,
@@ -177,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     vertical: 16,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
                                 onPressed: () => _onScanPokemon(context),
@@ -192,7 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: const Icon(Icons.mic, size: 32),
                                 label: const Text('Detect from Audio'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFFCB05),
+                                  backgroundColor: const Color.fromRGBO(
+                                    234,
+                                    163,
+                                    17,
+                                    1,
+                                  ),
                                   foregroundColor: Colors.black,
                                   textStyle: const TextStyle(
                                     fontSize: 24,
@@ -202,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     vertical: 16,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                   elevation: 4,
                                 ),
