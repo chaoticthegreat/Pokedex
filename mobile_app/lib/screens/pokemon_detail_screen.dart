@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../classification_probabilities.dart';
+
 class PokemonDetailScreen extends StatelessWidget {
   static const routeName = '/pokemon_detail';
-  final String speciesName;
-  final double confidence;
+  final ClassificationProbabilities probabilities;
   final dynamic image; // Will be File/Image type in real use
 
   const PokemonDetailScreen({
     super.key,
-    required this.speciesName,
-    required this.confidence,
+    required this.probabilities,
     this.image,
   });
 
@@ -21,6 +21,7 @@ class PokemonDetailScreen extends StatelessWidget {
     final types = ['Electric'];
     final description =
         'Whenever Pikachu comes across something new, it blasts it with a jolt of electricity.';
+
     return Container(
       decoration: const BoxDecoration(color: Color.fromRGBO(17, 17, 17, 1)),
       child: Scaffold(
@@ -52,7 +53,7 @@ class PokemonDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    speciesName,
+                    probabilities.getMostProbableClass().toUpperCase(),
                     style: GoogleFonts.inter(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -89,7 +90,7 @@ class PokemonDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Confidence: ${(confidence * 100).toStringAsFixed(1)}%',
+                    'Confidence: ${(probabilities.getProbability(probabilities.getMostProbableClass()) * 100).toStringAsFixed(1)}%',
                     style: const TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                 ],

@@ -1,13 +1,13 @@
 import 'dart:io';
-import 'dart:math';
+import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
-
+import 'package:cross_file/cross_file.dart';
 import 'camera_modal_sheet.dart';
+import '../image_classifier.dart';
 import 'pokemon_detail_screen.dart';
+import '../classification_probabilities.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,48 +16,54 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isProcessing = false;
+  final ImageClassifier _classifier = ImageClassifier(
+    'assets/models/image-cnn.tflite',
+  );
 
-  Future<bool> _ensureCameraPermission() async {
-    final status = await Permission.camera.status;
-    if (status.isGranted) return true;
-    final result = await Permission.camera.request();
-    return result.isGranted;
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _classifier.close();
+    super.dispose();
   }
 
   void _onScanPokemon(BuildContext context) async {
-    final cameras = await availableCameras();
-
-    if (cameras.isEmpty) return;
-
     if (!context.mounted) return;
 
-    // show the modal, await the XFile
     final XFile? picture = await showModalBottomSheet<XFile>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.black,
-      builder: (_) => CameraModalSheet(camera: cameras.first),
+      backgroundColor: Colors.black.withAlpha(200),
+      useSafeArea: true,
+      enableDrag: true,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      builder: (context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: CameraModalSheet(),
+        ),
+      ),
     );
 
     // if the user took one, navigate
     if (picture != null) {
-      final model = await Interpreter.fromAsset('assets/models/image-cnn.tflite');
+      ClassificationProbabilities probabilities = ClassificationProbabilities(
+        await _classifier.classifyImage(picture),
+      );
 
-      Random random = Random();
+      if (!context.mounted) return;
 
-      List<List<List<List<double>>>> input = [List.generate(200, (_) => List.generate(200, (_) => List.generate(3, (_) => random.nextDouble())))];
-      var output = List.filled(1*8, 0).reshape([1,8]);
-
-      model.run(input, output);
-
-      // TODO: preprocess the image, resize to 200x200, mean and std
+      print('Probabilities: $probabilities');
 
       Navigator.of(context).pushNamed(
         PokemonDetailScreen.routeName,
         arguments: {
-          'speciesName': 'Pikachu',
-          'confidence': 0.98,
+          'probabilities': probabilities,
           'image': File(picture.path),
         },
       );
@@ -176,23 +182,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (_isProcessing)
-                Container(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text(
-                          'Identifying Pokémon...',
-                          style: TextStyle(color: Colors.white, fontSize: 20),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

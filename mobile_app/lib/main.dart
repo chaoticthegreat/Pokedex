@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
       title: 'Pokédex',
       theme: ThemeData(
         colorScheme: ColorScheme(
-          brightness: Brightness.light,
+          brightness: Brightness.dark,
           primary: const Color.fromRGBO(194, 45, 43, 1), // Pokeball red
           onPrimary: Colors.white,
           secondary: const Color(0xFF2A75BB), // Pokemon blue
@@ -59,8 +59,7 @@ class MyApp extends StatelessWidget {
           return PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
                 PokemonDetailScreen(
-                  speciesName: args['speciesName'],
-                  confidence: args['confidence'],
+                  probabilities: args['probabilities'],
                   image: args['image'],
                 ),
             transitionsBuilder:

@@ -1,79 +1,108 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class CameraModalSheet extends StatefulWidget {
-  final CameraDescription camera;
-  const CameraModalSheet({required this.camera, super.key});
+  const CameraModalSheet({super.key});
 
   @override
   State<CameraModalSheet> createState() => _CameraModalSheetState();
 }
 
 class _CameraModalSheetState extends State<CameraModalSheet> {
-  late final CameraController _controller;
-  late final Future<void> _initializeFuture;
+  List<CameraDescription?> _cameras = [];
+  CameraController? _controller;
+  Future<void>? _initializeFuture;
   bool _isTaking = false;
 
   @override
   void initState() {
     super.initState();
+    _setupCamera();
+  }
+
+  Future<void> _setupCamera() async {
+    final granted = await _ensureCameraPermission();
+
+    if (!granted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera permission is required to scan Pokémon'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) return;
+
+    _cameras = cameras;
+
     _controller = CameraController(
-      widget.camera,
-      ResolutionPreset.medium,
-      enableAudio: false, // no audio for stills
+      cameras.first,
+      ResolutionPreset.low,
+      enableAudio: false,
     );
 
-    _initializeFuture = _controller.initialize().then((_) async {
-      // ensure preview is running immediately on first open
-      try {
-        await _controller.resumePreview();
-      } catch (_) {
-        // ignore if already running or unsupported
-      }
-      if (mounted) setState(() {}); // trigger rebuild once ready
-    });
+    _initializeFuture = _controller?.initialize();
+
+    setState(() {});
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
+  }
+
+  Future<bool> _ensureCameraPermission() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) return true;
+    final result = await Permission.camera.request();
+    return result.isGranted;
   }
 
   Future<void> _capture() async {
     if (_isTaking) return;
+
     setState(() => _isTaking = true);
 
     try {
-      final photo = await _controller.takePicture();
-      // pause preview to avoid maxImages warnings on some platforms
-      try {
-        await _controller.pausePreview();
-      } catch (_) {}
-      if (context.mounted) Navigator.of(context).pop(photo);
+      final photo = await _controller?.takePicture();
+
+      if (mounted) Navigator.of(context).pop(photo);
     } finally {
-      if (mounted) setState(() => _isTaking = false);
+      setState(() => _isTaking = false);
     }
+  }
+
+  Future<void> _switchCamera() async {
+    if (_cameras.length < 2) return;
+
+    final currentIndex = _cameras.indexOf(_controller?.description);
+    final nextIndex = (currentIndex + 1) % _cameras.length;
+
+    _controller?.dispose();
+    _controller = CameraController(
+      _cameras[nextIndex]!,
+      ResolutionPreset.low,
+      enableAudio: false,
+    );
+
+    _initializeFuture = _controller?.initialize();
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height * 0.85;
+    final height = MediaQuery.of(context).size.height * 0.75;
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: Container(
+      child: SizedBox(
         height: height,
-        decoration: BoxDecoration(
-          color: Colors.black,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3), // corrected opacity
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
         child: Column(
           children: [
             // Drag handle
@@ -104,27 +133,38 @@ class _CameraModalSheetState extends State<CameraModalSheet> {
 
                   return Stack(
                     children: [
-                      // ORIGINAL preview, no aspect tweaks
-                      CameraPreview(_controller),
+                      if (_controller != null) CameraPreview(_controller!),
 
                       if (_isTaking)
-                        Container(
-                          color: Colors.black54,
-                          child: const Center(child: CircularProgressIndicator()),
-                        ),
+                        const Center(child: CircularProgressIndicator()),
 
                       Align(
                         alignment: Alignment.bottomCenter,
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 32),
-                          child: FloatingActionButton(
-                            onPressed: _capture,
-                            backgroundColor: Colors.red,
-                            child: const Icon(
-                              Icons.camera,
-                              size: 32,
-                              color: Colors.white,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              FloatingActionButton(
+                                onPressed: _capture,
+                                backgroundColor: Colors.red,
+                                child: const Icon(
+                                  Icons.camera,
+                                  size: 32,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 16),
+                              FloatingActionButton(
+                                onPressed: _switchCamera,
+                                backgroundColor: Colors.blue,
+                                child: const Icon(
+                                  Icons.switch_camera,
+                                  size: 32,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
