@@ -26,10 +26,15 @@ jobs:
         run: flutter pub get
 
       - name: Build unsigned iOS IPA
-        run: flutter build ipa --no-codesign --release
+        run: flutter build ipa --no-codesign
+
+      - name: Compress Archives and IPAs
+        run: |
+          cd build/ios/archive/Runner.xcarchive/Products/Applications
+          mv Runner.app Payload.app
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: unsigned-ipa
-          path: build/ios/ipa/*.ipa
+          name: Payload.ipa
+          path: mobile_app/build/ios/archive/Runner.xcarchive/Products/Applications/Payload.app
