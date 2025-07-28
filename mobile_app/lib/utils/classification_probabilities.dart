@@ -15,6 +15,10 @@ class ClassificationProbabilities {
     return _probabilities.values.toList();
   }
 
+  Map<String, double> getProbabilitiesMap() {
+    return Map.from(_probabilities);
+  }
+
   String getMostProbableClass() {
     return _probabilities.entries.reduce((a, b) => a.value > b.value ? a : b).key;
   }

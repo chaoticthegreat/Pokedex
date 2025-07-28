@@ -4,10 +4,11 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cross_file/cross_file.dart';
+
 import 'camera_modal_sheet.dart';
-import '../image_classifier.dart';
 import 'pokemon_detail_screen.dart';
-import '../classification_probabilities.dart';
+import '../utils/image_classifier.dart';
+import '../utils/classification_probabilities.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,9 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // if the user took one, navigate
     if (picture != null) {
-      ClassificationProbabilities probabilities = ClassificationProbabilities(
-        await _classifier.classifyImage(picture),
-      );
+      ClassificationProbabilities probabilities = await _classifier.classifyImage(picture);
 
       if (!context.mounted) return;
 

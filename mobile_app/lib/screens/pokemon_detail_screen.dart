@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../classification_probabilities.dart';
+import '../utils/classification_probabilities.dart';
 
 class PokemonDetailScreen extends StatelessWidget {
   static const routeName = '/pokemon_detail';
@@ -16,8 +16,6 @@ class PokemonDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spriteUrl =
-        'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png';
     final types = ['Electric'];
     final description =
         'Whenever Pikachu comes across something new, it blasts it with a jolt of electricity.';
@@ -47,9 +45,13 @@ class PokemonDetailScreen extends StatelessWidget {
                             image,
                             width: 160,
                             height: 160,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.fitHeight,
                           )
-                        : Image.network(spriteUrl, width: 160, height: 160),
+                        : Container(
+                            color: Colors.white,
+                            width: 160,
+                            height: 160,
+                          ),
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -92,6 +94,40 @@ class PokemonDetailScreen extends StatelessWidget {
                   Text(
                     'Confidence: ${(probabilities.getProbability(probabilities.getMostProbableClass()) * 100).toStringAsFixed(1)}%',
                     style: const TextStyle(fontSize: 16, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 24),
+                  // have text button to view other possible detections as an ExpansionTile
+                  ExpansionTile(
+                    title: const Text(
+                      'Other Detections',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    children: [
+                      SizedBox(
+                        height: 200,
+                        child: Scrollbar(
+                          child: ListView(
+                            children: probabilities
+                                .getProbabilitiesMap()
+                                .entries
+                                .where(
+                                  (entry) =>
+                                      entry.key !=
+                                      probabilities.getMostProbableClass(),
+                                )
+                                .map(
+                                  (entry) => ListTile(
+                                    title: Text(
+                                      '${entry.key}: ${(entry.value * 100).toStringAsFixed(1)}%',
+                                      style: const TextStyle(color: Colors.white70),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
