@@ -10,14 +10,14 @@ import 'classification_probabilities.dart';
 class ImageClassifier {
   final Future<Interpreter> _interpreter;
   final List<String> _labels = [
-    "charmander",
-    "mew",
-    "psyduck",
-    "bulbosaur",
-    "gengar",
-    "magikarp",
-    "pikachu",
-    "squirtle",
+    'bulbosaur',
+    'charmander',
+    'gengar',
+    'magikarp',
+    'mew',
+    'pikachu',
+    'psyduck',
+    'squirtle',
   ];
 
   ImageClassifier(String modelPath)
