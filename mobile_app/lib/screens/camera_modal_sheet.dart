@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -58,10 +60,64 @@ class _CameraModalSheetState extends State<CameraModalSheet> {
   }
 
   Future<bool> _ensureCameraPermission() async {
-    final status = await Permission.camera.status;
-    if (status.isGranted) return true;
-    final result = await Permission.camera.request();
-    return result.isGranted;
+    // final status = await Permission.camera.status;
+    // if (status.isGranted) return true;
+    // final result = await Permission.camera.request();
+    // return result.isGranted;
+
+    if (Platform.isAndroid) {
+      Map<Permission, PermissionStatus> statues = await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
+      PermissionStatus? statusCamera = statues[Permission.camera];
+
+      PermissionStatus? statusPhotos = statues[Permission.microphone];
+
+      bool isGranted =
+          statusCamera == PermissionStatus.granted &&
+          statusPhotos == PermissionStatus.granted;
+      if (isGranted) {
+        return true;
+      }
+
+      bool isPermanentlyDenied =
+          statusCamera == PermissionStatus.permanentlyDenied ||
+          statusPhotos == PermissionStatus.permanentlyDenied;
+      if (isPermanentlyDenied) {
+        return false;
+      }
+    } else {
+      Map<Permission, PermissionStatus> statues = await [
+        Permission.camera,
+        Permission.storage,
+        Permission.photos,
+        Permission.microphone,
+      ].request();
+      PermissionStatus? statusCamera = statues[Permission.camera];
+      PermissionStatus? statusStorage = statues[Permission.storage];
+      PermissionStatus? statusPhotos = statues[Permission.photos];
+      PermissionStatus? statusMicrophone = statues[Permission.microphone];
+      bool isGranted =
+          statusCamera == PermissionStatus.granted &&
+          statusStorage == PermissionStatus.granted &&
+          statusPhotos == PermissionStatus.granted &&
+          statusMicrophone == PermissionStatus.granted;
+      if (isGranted) {
+        return true;
+      }
+
+      bool isPermanentlyDenied =
+          statusCamera == PermissionStatus.permanentlyDenied ||
+          statusStorage == PermissionStatus.permanentlyDenied ||
+          statusPhotos == PermissionStatus.permanentlyDenied ||
+          statusMicrophone == PermissionStatus.permanentlyDenied;
+      if (isPermanentlyDenied) {
+        return false;
+      }
+    }
+
+    return false;
   }
 
   Future<void> _capture() async {

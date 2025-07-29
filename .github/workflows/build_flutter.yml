@@ -31,11 +31,19 @@ jobs:
       - name: Compress Archives and IPAs
         run: |
           cd build/ios/archive/Runner.xcarchive/Products/Applications
-          mv Runner.app Payload.app
-          zip -r Payload.ipa Payload.app
+          mv Runner.app Pokedex.app
+          mkdir Payload
+          mv Pokedex.app Payload/
+          zip -r Payload.ipa Payload/
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: Payload.ipa
           path: mobile_app/build/ios/archive/Runner.xcarchive/Products/Applications/Payload.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Podfile
+          path: mobile_app/ios/Podfile
