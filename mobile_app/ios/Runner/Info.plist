@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>We need to access your camera to scan Pokémon</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need to access your microphone to classify Pokémon from audio</string>
 </dict>
 </plist>
