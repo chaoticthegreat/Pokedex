@@ -32,9 +32,10 @@ jobs:
         run: |
           cd build/ios/archive/Runner.xcarchive/Products/Applications
           mv Runner.app Payload.app
+          zip -r Payload.ipa Payload.app
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: Payload.ipa
-          path: mobile_app/build/ios/archive/Runner.xcarchive/Products/Applications/Payload.app
+          path: mobile_app/build/ios/archive/Runner.xcarchive/Products/Applications/Payload.ipa
