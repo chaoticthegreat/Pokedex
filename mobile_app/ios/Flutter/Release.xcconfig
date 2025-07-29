@@ -1,1 +1,10 @@
 #include "Generated.xcconfig"
+
+// Enable deployment post‑processing so stripping actually runs
+DEPLOYMENT_POSTPROCESSING = YES
+// Make sure the archived product itself gets stripped
+STRIP_INSTALLED_PRODUCT    = YES
+// Only strip non‑global symbols (preserve your FFI entry points)
+STRIP_STYLE               = non-global
+// Use a separate strip tool rather than embedding it in the linker
+SEPARATE_STRIP            = YES
