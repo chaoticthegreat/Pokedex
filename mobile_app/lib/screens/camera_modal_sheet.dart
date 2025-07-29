@@ -26,11 +26,11 @@ class _CameraModalSheetState extends State<CameraModalSheet> {
   Future<void> _setupCamera() async {
     final granted = await _ensureCameraPermission();
 
-    if (!granted) {
+    if (!granted.$2) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Camera permission is required to scan Pokémon'),
+          SnackBar(
+            content: Text('${granted.$1} Camera permission is required to scan Pokémon'),
           ),
         );
       }
@@ -59,7 +59,7 @@ class _CameraModalSheetState extends State<CameraModalSheet> {
     super.dispose();
   }
 
-  Future<bool> _ensureCameraPermission() async {
+  Future<(String, bool)> _ensureCameraPermission() async {
     // final status = await Permission.camera.status;
     // if (status.isGranted) return true;
     // final result = await Permission.camera.request();
@@ -72,52 +72,44 @@ class _CameraModalSheetState extends State<CameraModalSheet> {
       ].request();
       PermissionStatus? statusCamera = statues[Permission.camera];
 
-      PermissionStatus? statusPhotos = statues[Permission.microphone];
+      PermissionStatus? statusMicrophone = statues[Permission.microphone];
 
       bool isGranted =
           statusCamera == PermissionStatus.granted &&
-          statusPhotos == PermissionStatus.granted;
+          statusMicrophone == PermissionStatus.granted;
       if (isGranted) {
-        return true;
+        return ("Granted", true);
       }
 
       bool isPermanentlyDenied =
           statusCamera == PermissionStatus.permanentlyDenied ||
-          statusPhotos == PermissionStatus.permanentlyDenied;
+          statusMicrophone == PermissionStatus.permanentlyDenied;
       if (isPermanentlyDenied) {
-        return false;
+        return ("Permanently Denied", false);
       }
     } else {
       Map<Permission, PermissionStatus> statues = await [
         Permission.camera,
-        Permission.storage,
-        Permission.photos,
         Permission.microphone,
       ].request();
       PermissionStatus? statusCamera = statues[Permission.camera];
-      PermissionStatus? statusStorage = statues[Permission.storage];
-      PermissionStatus? statusPhotos = statues[Permission.photos];
       PermissionStatus? statusMicrophone = statues[Permission.microphone];
       bool isGranted =
           statusCamera == PermissionStatus.granted &&
-          statusStorage == PermissionStatus.granted &&
-          statusPhotos == PermissionStatus.granted &&
           statusMicrophone == PermissionStatus.granted;
       if (isGranted) {
-        return true;
+        return ("Granted", true);
       }
 
       bool isPermanentlyDenied =
           statusCamera == PermissionStatus.permanentlyDenied ||
-          statusStorage == PermissionStatus.permanentlyDenied ||
-          statusPhotos == PermissionStatus.permanentlyDenied ||
           statusMicrophone == PermissionStatus.permanentlyDenied;
       if (isPermanentlyDenied) {
-        return false;
+        return ("Permanently denied", false);
       }
     }
 
-    return false;
+    return ("No clue what this is", false);
   }
 
   Future<void> _capture() async {
