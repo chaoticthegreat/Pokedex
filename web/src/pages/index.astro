@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Webcam Classification with ONNX Runtime Web</title>
+	<style>
+		body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+		video, canvas { border: 1px solid #ccc; border-radius: 8px; }
+		#result { margin-top: 12px; font-size: 1.2rem; }
+		button { margin-top: 12px; padding: 8px 16px; font-size: 1rem; border: none; border-radius: 4px; background: #007bff; color: white; cursor: pointer; }
+		button:disabled { background: #aaa; cursor: not-allowed; }
+	</style>
+</head>
+<body>
+<h1>Webcam Classification with ONNX Runtime Web</h1>
+<video id="webcam" width="200" height="200" autoplay muted></video>
+<canvas id="capture" width="200" height="200" style="display:none;"></canvas>
+<div id="result">Loading model...</div>
+<button id="startButton" disabled>Start Classification</button>
+
+<!-- ONNX Runtime Web CDN -->
+<script is:inline src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script>
+const video = document.getElementById('webcam');
+const canvas = document.getElementById('capture');
+const ctx = canvas.getContext('2d');
+const resultDiv = document.getElementById('result');
+const startButton = document.getElementById('startButton');
+
+let session;
+// Replace with your own labels corresponding to model outputs
+const labels = ['bulbosaur', 'charmander', 'gengar', 'magikarp', 'mew', 'pikachu', 'psyduck', 'squirtle']
+
+async function initWebcam() {
+	try {
+		const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 200, height: 200 } });
+		video.srcObject = stream;
+		return new Promise(resolve => video.onloadedmetadata = resolve);
+	} catch (e) {
+		resultDiv.innerText = 'Error accessing webcam: ' + e.message;
+	}
+}
+
+function softmax(logits) {
+	const maxLogit = Math.max(...logits); // for numerical stability
+        const exps = logits.map(x => Math.exp(x - maxLogit));
+	const sumExps = exps.reduce((a, b) => a + b);
+	return exps.map(e => e / sumExps);
+}
+
+async function loadModel() {
+	try {
+		// model.onnx.data should be in same directory
+            session = await ort.InferenceSession.create('/poke_model_vgg_v3.onnx');
+		resultDiv.innerText = 'Model loaded, ready.';
+		startButton.disabled = false;
+	} catch (e) {
+		resultDiv.innerText = 'Failed to load model: ' + e.message;
+	}
+}
+
+function preprocess2(data, width, height) {
+	const floatData = new Float32Array(3 * width * height);
+	console.log(session.inputNames);
+
+	const mean = [0.4118, 0.3924, 0.3673];
+	const std = [0.2723, 0.2592, 0.2440];
+
+	for (let i = 0; i < width * height; i++) {
+		const r = data[i * 4] / 255;       // normalize to [0,1]
+            const g = data[i * 4 + 1] / 255;
+		const b = data[i * 4 + 2] / 255;
+
+		// Apply per-channel normalization (match PyTorch transforms)
+            floatData[i] = (r - mean[0]) / std[0];                          // R
+            floatData[i + width * height] = (g - mean[1]) / std[1];        // G
+            floatData[i + 2 * width * height] = (b - mean[2]) / std[2];    // B
+        }
+
+	return floatData;
+}
+
+
+function preprocess() {
+	ctx.drawImage(video, 0, 0, 200, 200);
+	const imageData = ctx.getImageData(0, 0, 200, 200);
+	const { data } = imageData;
+	const float32Data = new Float32Array(1 * 3 * 200 * 200);
+	// normalize to [0, 1]
+        for (let i = 0; i < 200 * 200; i++) {
+		float32Data[i] = data[i * 4] / 255;         // R
+            float32Data[i + 200 * 200] = data[i * 4 + 1] / 255; // G
+            float32Data[i + 2 * 200 * 200] = data[i * 4 + 2] / 255; // B
+        }
+	return new ort.Tensor('float32', float32Data, [1, 3, 200, 200]);
+}
+
+async function classifyFrame() {
+	ctx.drawImage(video, 0, 0, 200, 200);
+	const imageData = ctx.getImageData(0, 0, 200, 200);
+	const tensor = new ort.Tensor('float32', preprocess2(imageData.data, 200, 200), [1, 3, 200, 200]);
+	// const tensor = preprocess();
+        const feeds = { input: tensor }; // adjust 'input' to your model input name
+        try {
+		const outputMap = await session.run(feeds);
+		console.log(outputMap.linear_1.data);
+		// adjust 'output' to your model output name
+            const outputTensor = outputMap.linear_1;
+		const scores = softmax(outputTensor.data);
+		const highest = scores.indexOf(Math.max(...scores));
+		resultDiv.innerText = `Prediction: ${labels[highest]} (${(scores[highest] * 100).toFixed(2)}%)`;
+	} catch (e) {
+		resultDiv.innerText = 'Error during inference: ' + e.message;
+	}
+}
+
+startButton.addEventListener('click', () => {
+	resultDiv.innerText = 'Classifying...';
+	// run every 500ms
+        setInterval(classifyFrame, 500);
+	startButton.disabled = true;
+});
+
+(async () => {
+	await initWebcam();
+	await loadModel();
+})();
+</script>
+</body>
+</html>
