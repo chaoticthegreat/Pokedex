@@ -44,6 +44,11 @@ dependencies:
   path_provider: ^2.1.5
   flutter_launcher_icons: ^0.14.4
 
+  fllama:
+    git:
+      url: https://github.com/Telosnex/fllama.git
+      ref: main
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -88,7 +93,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/models/image-cnn.tflite
-  #   - images/a_dot_ham.jpeg
+    - assets/models/Llama-3.2-1B-Instruct-Q4_0.gguf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

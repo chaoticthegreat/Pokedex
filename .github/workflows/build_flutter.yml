@@ -17,6 +17,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Download Llama Model
+        run: |
+          cd assets/models
+          wget https://huggingface.co/telosnex/fllama/blob/main/Llama-3.2-1B-Instruct-Q4_0.gguf -o Llama-3.2-1B-Instruct-Q4_0.gguf
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
