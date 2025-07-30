@@ -52,7 +52,7 @@ function softmax(logits) {
 async function loadModel() {
 	try {
 		// model.onnx.data should be in same directory
-            session = await ort.InferenceSession.create('/model.onnx');
+            session = await ort.InferenceSession.create('/poke_model_vgg_v3.onnx');
 		resultDiv.innerText = 'Model loaded, ready.';
 		startButton.disabled = false;
 	} catch (e) {
@@ -64,8 +64,8 @@ function preprocess2(data, width, height) {
 	const floatData = new Float32Array(3 * width * height);
 	console.log(session.inputNames);
 
-	const mean = [0.4960, 0.4695, 0.4262];
-	const std = [0.2158, 0.2027, 0.1885];
+	const mean = [0.4118, 0.3924, 0.3673];
+	const std = [0.2723, 0.2592, 0.2440];
 
 	for (let i = 0; i < width * height; i++) {
 		const r = data[i * 4] / 255;       // normalize to [0,1]
