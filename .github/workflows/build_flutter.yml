@@ -26,7 +26,7 @@ jobs:
         run: flutter pub get
 
       - name: Build unsigned iOS IPA
-        run: flutter build ipa --no-codesign
+        run: flutter build ipa --simulator --no-codesign
 
       - name: Compress Archives and IPAs
         run: |
